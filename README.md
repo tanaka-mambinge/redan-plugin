@@ -2,6 +2,16 @@
 
 Standalone Codex plugin for managing Redan Zimbabwe content and operations. FAQ categories and multilingual FAQ records are the first supported feature.
 
+## Add the plugin marketplace
+
+In Codex, choose **Add plugin marketplace** and enter:
+
+```text
+https://github.com/tanaka-mambinge/redan-plugin
+```
+
+The marketplace manifest at `.agents/plugins/marketplace.json` installs the Redan Management plugin from this repository.
+
 ## Authentication
 
 ```bash
