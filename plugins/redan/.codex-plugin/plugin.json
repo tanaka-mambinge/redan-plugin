@@ -16,9 +16,9 @@
     "composerIcon": "./assets/redan-logo.png",
     "logo": "./assets/redan-logo.png",
     "defaultPrompt": [
-      "List Redan FAQ categories.",
-      "Find the Redan FAQ about fuel cards.",
-      "Update this Redan FAQ in all three languages."
+      "Show me our FAQ categories and the questions in each one.",
+      "Create a new multilingual FAQ about fuel cards in English, ChiShona, and isiNdebele.",
+      "Find the FAQ about buying fuel, update its translations, and show me the public link."
     ]
   }
 }
