@@ -11,6 +11,17 @@ redan auth status
 
 The CLI uses the built-in Redan API URL and stores the credential in the OS keyring, following the Takealot plugin pattern. The Redan Laravel application validates the corresponding server credential with `REDAN_FAQ_PLUGIN_TOKEN`. Tokens are never printed by the CLI or included in normal output.
 
+## Install the released CLI
+
+On Linux or macOS, the skill downloads and verifies the matching release automatically. To use it manually:
+
+```bash
+REDAN_BIN="$(sh scripts/download_cli.sh)"
+"$REDAN_BIN" version
+```
+
+On Windows, run `scripts/download_cli.ps1` with PowerShell. Releases are created by pushing a matching tag such as `v0.1.0`.
+
 ## Development
 
 ```bash
@@ -19,4 +30,4 @@ go test ./...
 python3 /home/t12e/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .
 ```
 
-The `redan` CLI supports list, search, retrieve, create, update, and confirmed delete operations for FAQ categories and FAQs. Responses include links to the existing authenticated Filament pages at `/admin/redan-faq-categories` and `/admin/redan-faqs`.
+The release launcher downloads and checksum-verifies the matching `redan` binary from GitHub Releases. The `redan` CLI supports list, search, retrieve, create, update, and confirmed delete operations for FAQ categories and FAQs. Responses include links to the existing authenticated Filament pages at `/admin/redan-faq-categories` and `/admin/redan-faqs`.

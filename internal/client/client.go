@@ -19,7 +19,7 @@ import (
 	"github.com/t12e/redan-plugin/internal/models"
 )
 
-const DefaultAPIBase = "https://dev-whatsapp.iamt12e.co.zw"
+const DefaultAPIBase = "http://127.0.0.1:8205"
 
 type Client struct {
 	baseURL    string
