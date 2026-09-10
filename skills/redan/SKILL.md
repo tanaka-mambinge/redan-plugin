@@ -21,6 +21,8 @@ $REDAN_BIN = & powershell -NoProfile -ExecutionPolicy Bypass -File <plugin-root>
 
 The launcher downloads the matching GitHub Release binary from `tanaka-mambinge/redan-plugin`, verifies `checksums.txt`, and caches it under `~/.redan/bin`. For local development, use `scripts/build_cli.sh` instead. The CLI uses the built-in local Redan API URL (`http://127.0.0.1:8205`) and stores the temporary authenticated session in the OS keyring, matching the Takealot plugin pattern. Run `$REDAN_BIN auth login` to open the temporary local credential page. Do not put credentials in command arguments, chat, environment variables, or config files.
 
+The user must complete the login page themselves. Agents must never submit, infer, reuse, or test with Redan credentials, including seeded local admin credentials. Stop after opening the page and wait for the user to finish authentication.
+
 ## Commands
 
 ```bash

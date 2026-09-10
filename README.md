@@ -11,6 +11,8 @@ redan auth status
 
 `redan auth login` opens a temporary loopback-only page where you enter your Redan admin email and password. The Redan API returns a short-lived session token; the CLI stores it only in the native OS keyring and never prints it. No environment variables, config files, or token arguments are required.
 
+Credential entry is always user-driven. Agents and automation must not submit, infer, reuse, or test with Redan credentials.
+
 The built-in API URL is `http://127.0.0.1:8205` for the current local Redan server. An optional `--api-url` flag is available for another deployment; it is stored with the keyring session, not in a config file.
 
 ## Install the released CLI
