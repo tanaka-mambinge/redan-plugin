@@ -182,6 +182,37 @@ func (c *Client) DeleteFAQ(ctx context.Context, id string) (models.DeleteRespons
 	return result, err
 }
 
+func (c *Client) ListForms(ctx context.Context, search, formType string, page, perPage int) (models.FormPage, error) {
+	var result models.FormPage
+	values := url.Values{}
+	if search != "" {
+		values.Set("search", search)
+	}
+	if formType != "" {
+		values.Set("type", formType)
+	}
+	if page > 0 {
+		values.Set("page", strconv.Itoa(page))
+	}
+	if perPage > 0 {
+		values.Set("per_page", strconv.Itoa(perPage))
+	}
+	err := c.do(ctx, http.MethodGet, "/api/redan/forms", values, nil, &result)
+	return result, err
+}
+
+func (c *Client) GetForm(ctx context.Context, key string) (models.FormResponse, error) {
+	var result models.FormResponse
+	err := c.do(ctx, http.MethodGet, "/api/redan/forms/"+url.PathEscape(key), nil, nil, &result)
+	return result, err
+}
+
+func (c *Client) UpdateForm(ctx context.Context, key string, payload map[string]any) (models.FormResponse, error) {
+	var result models.FormResponse
+	err := c.do(ctx, http.MethodPatch, "/api/redan/forms/"+url.PathEscape(key), nil, payload, &result)
+	return result, err
+}
+
 func (c *Client) do(ctx context.Context, method, path string, query url.Values, payload any, output any) error {
 	var body io.Reader
 	if payload != nil {

@@ -1,7 +1,7 @@
 {
   "name": "redan-plugin",
-  "version": "0.1.1",
-  "description": "Manage Redan Zimbabwe content and operations through the Redan CLI.",
+  "version": "0.2.0",
+  "description": "Manage Redan Zimbabwe content, form builders, and operations through the Redan CLI.",
   "author": {
     "name": "t12e"
   },
@@ -9,7 +9,7 @@
   "interface": {
     "displayName": "Redan Management",
     "shortDescription": "Manage Redan content and operations",
-    "longDescription": "Manage Redan Zimbabwe content and operations through an authenticated Redan CLI, starting with multilingual FAQ categories and FAQ records.",
+    "longDescription": "Manage Redan Zimbabwe content and operations through an authenticated Redan CLI, including multilingual FAQs, categories, and localized form-builder fields.",
     "developerName": "t12e",
     "category": "Business",
     "capabilities": ["Search", "Content management", "Multilingual"],
@@ -18,7 +18,7 @@
     "defaultPrompt": [
       "Show me our FAQ categories and the questions in each one.",
       "Create a new multilingual FAQ about fuel cards in English, ChiShona, and isiNdebele.",
-      "Find the FAQ about buying fuel, update its translations, and show me the public link."
+      "Show me the bulk fuel quotation form and update its questions in all three languages."
     ]
   }
 }

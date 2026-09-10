@@ -51,6 +51,42 @@ type CategoryResponse struct {
 type FAQResponse struct {
 	Data FAQ `json:"data"`
 }
+type FormOption struct {
+	Value  string            `json:"value"`
+	Labels map[string]string `json:"labels"`
+}
+
+type FormField struct {
+	Key       string            `json:"key"`
+	Type      string            `json:"type"`
+	Required  bool              `json:"required"`
+	Skippable bool              `json:"skippable"`
+	Active    bool              `json:"active"`
+	Labels    map[string]string `json:"labels"`
+	Options   []FormOption      `json:"options"`
+}
+
+type Form struct {
+	Key        string      `json:"key"`
+	Type       string      `json:"type"`
+	Name       string      `json:"name"`
+	Version    int         `json:"version"`
+	Active     bool        `json:"active"`
+	Fields     []FormField `json:"fields"`
+	FieldCount int         `json:"field_count"`
+	Links      Links       `json:"links,omitempty"`
+}
+
+type FormPage struct {
+	Data  []Form    `json:"data"`
+	Meta  PageMeta  `json:"meta"`
+	Links PageLinks `json:"links"`
+}
+
+type FormResponse struct {
+	Data Form `json:"data"`
+}
+
 type DeleteResponse struct {
 	Data struct {
 		ID      string `json:"id"`

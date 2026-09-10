@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/t12e/redan-plugin/internal/models"
 )
 
 func TestListFAQsSendsBearerTokenAndQuery(t *testing.T) {
@@ -29,6 +31,64 @@ func TestListFAQsSendsBearerTokenAndQuery(t *testing.T) {
 	}
 	if result.Meta.Total != 0 {
 		t.Fatalf("total = %d", result.Meta.Total)
+	}
+}
+
+func TestListFormsSendsTypeAndSearchQuery(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/redan/forms" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		if r.URL.Query().Get("type") != "quote" || r.URL.Query().Get("search") != "fuel" {
+			t.Errorf("query = %s", r.URL.RawQuery)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[],"meta":{"current_page":1,"per_page":20,"total":0,"last_page":1},"links":{"self":"http://example.test"}}`))
+	}))
+	defer server.Close()
+
+	result, err := NewWithHTTPClient(server.URL, "secret", server.Client()).ListForms(context.Background(), "fuel", "quote", 0, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Meta.Total != 0 {
+		t.Fatalf("total = %d", result.Meta.Total)
+	}
+}
+
+func TestUpdateFormSendsActiveAndLocalizedFields(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch || r.URL.Path != "/api/redan/forms/bulk-fuel-quotation" {
+			t.Fatalf("request = %s %s", r.Method, r.URL.Path)
+		}
+		var payload map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		if payload["active"] != false {
+			t.Fatalf("active = %#v", payload["active"])
+		}
+		fields, ok := payload["fields"].([]any)
+		if !ok || len(fields) != 1 {
+			t.Fatalf("fields = %#v", payload["fields"])
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"key":"bulk-fuel-quotation","type":"quote","name":"Quotation","version":2,"active":false,"fields":[],"field_count":0,"links":{"admin":"http://example.test/admin/quotation-forms/bulk-fuel-quotation/edit"}}}`))
+	}))
+	defer server.Close()
+
+	result, err := NewWithHTTPClient(server.URL, "secret", server.Client()).UpdateForm(context.Background(), "bulk-fuel-quotation", map[string]any{
+		"active": false,
+		"fields": []models.FormField{{
+			Type:   "text",
+			Labels: map[string]string{"en": "Company", "sn": "Kambani", "nd": "Inkampani"},
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Data.Version != 2 || result.Data.Active {
+		t.Fatalf("result = %+v", result.Data)
 	}
 }
 

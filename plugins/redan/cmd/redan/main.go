@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 	"github.com/t12e/redan-plugin/internal/models"
 )
 
-var version = "0.1.0"
+var version = "0.2.0"
 
 func main() {
 	if err := run(context.Background(), os.Args[1:], os.Stdout); err != nil {
@@ -50,9 +51,95 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 	switch args[0] {
 	case "faq":
 		return faq(ctx, api, args[1:], jsonOutput, out)
+	case "forms":
+		return forms(ctx, api, args[1:], jsonOutput, out)
 	default:
 		return fmt.Errorf("unknown resource %q", args[0])
 	}
+}
+
+func forms(ctx context.Context, api *client.Client, args []string, jsonOutput bool, out io.Writer) error {
+	if len(args) == 0 {
+		return errors.New("forms requires list, get, or update")
+	}
+	switch args[0] {
+	case "list":
+		f := flag.NewFlagSet("forms list", flag.ContinueOnError)
+		f.SetOutput(io.Discard)
+		search := f.String("search", "", "search form keys and names")
+		formType := f.String("type", "", "filter by form type")
+		page := f.Int("page", 0, "one-based page")
+		perPage := f.Int("per-page", 20, "items per page")
+		if err := f.Parse(args[1:]); err != nil {
+			return err
+		}
+		result, err := api.ListForms(ctx, *search, *formType, *page, *perPage)
+		if err != nil {
+			return err
+		}
+		if jsonOutput {
+			return writeJSON(out, result)
+		}
+		for _, item := range result.Data {
+			status := "inactive"
+			if item.Active {
+				status = "active"
+			}
+			fmt.Fprintf(out, "%s\t%s\t%s\tv%d\t%s\t%d fields\t%s\n", item.Key, item.Name, item.Type, item.Version, status, item.FieldCount, item.Links.Admin)
+		}
+		return nil
+	case "get":
+		key, err := exactID(args, "get")
+		if err != nil {
+			return err
+		}
+		result, err := api.GetForm(ctx, key)
+		if err != nil {
+			return err
+		}
+		return printJSONOrForm(out, result.Data, jsonOutput)
+	case "update":
+		return updateForm(ctx, api, args, jsonOutput, out)
+	default:
+		return fmt.Errorf("unknown forms command %q", args[0])
+	}
+}
+
+func updateForm(ctx context.Context, api *client.Client, args []string, jsonOutput bool, out io.Writer) error {
+	key, rest, err := idAndRest(args)
+	if err != nil {
+		return err
+	}
+	f := flag.NewFlagSet("forms update", flag.ContinueOnError)
+	f.SetOutput(io.Discard)
+	active := f.String("active", "", "set active to true or false")
+	fieldsJSON := f.String("fields-json", "", "JSON array containing the complete form fields")
+	if err := f.Parse(rest); err != nil {
+		return err
+	}
+	payload := map[string]any{}
+	if strings.TrimSpace(*active) != "" {
+		value, parseErr := strconv.ParseBool(*active)
+		if parseErr != nil {
+			return errors.New("--active must be true or false")
+		}
+		payload["active"] = value
+	}
+	if strings.TrimSpace(*fieldsJSON) != "" {
+		var fields []models.FormField
+		if err := json.Unmarshal([]byte(*fieldsJSON), &fields); err != nil {
+			return fmt.Errorf("--fields-json must be a valid JSON array: %w", err)
+		}
+		payload["fields"] = fields
+	}
+	if len(payload) == 0 {
+		return errors.New("provide --active and/or --fields-json")
+	}
+	result, err := api.UpdateForm(ctx, key, payload)
+	if err != nil {
+		return err
+	}
+	return printJSONOrForm(out, result.Data, jsonOutput)
 }
 
 func faq(ctx context.Context, api *client.Client, args []string, jsonOutput bool, out io.Writer) error {
@@ -393,6 +480,13 @@ func printJSONOrFAQ(out io.Writer, value models.FAQ, jsonOutput bool) error {
 	_, err := fmt.Fprintf(out, "%s\n%s\n%s\n", value.Question["en"], value.Answer["en"], value.Links.Admin)
 	return err
 }
+func printJSONOrForm(out io.Writer, value models.Form, jsonOutput bool) error {
+	if jsonOutput {
+		return writeJSON(out, map[string]any{"data": value})
+	}
+	_, err := fmt.Fprintf(out, "%s\n%s\nv%d (%d fields)\n%s\n", value.Name, value.Links.Admin, value.Version, value.FieldCount, value.Key)
+	return err
+}
 func writeResult(out io.Writer, value any, jsonOutput bool, message string) error {
 	if jsonOutput {
 		return writeJSON(out, value)
@@ -406,6 +500,6 @@ func writeJSON(out io.Writer, value any) error {
 	return encoder.Encode(value)
 }
 func usage(out io.Writer) error {
-	_, err := fmt.Fprintln(out, "redan manages Redan content and multilingual FAQs.\n\nCommands:\n  redan auth login [--email <address>]\n  redan auth status\n  redan auth logout\n  redan [--json] faq categories list|get|create|update|delete\n  redan [--json] faq faqs list|get|create|update|delete\n  redan version")
+	_, err := fmt.Fprintln(out, "redan manages Redan content, forms, and multilingual FAQs.\n\nCommands:\n  redan auth login [--email <address>]\n  redan auth status\n  redan auth logout\n  redan [--json] faq categories list|get|create|update|delete\n  redan [--json] faq faqs list|get|create|update|delete\n  redan [--json] forms list|get|update\n  redan version")
 	return err
 }

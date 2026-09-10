@@ -1,6 +1,6 @@
 ---
 name: redan
-description: Manage Redan Zimbabwe content and multilingual FAQ content through the Redan CLI.
+description: Manage Redan Zimbabwe content, form builders, and multilingual FAQ content through the Redan CLI.
 ---
 
 # Redan Management
@@ -42,8 +42,16 @@ $REDAN_BIN faq faqs get <id> --json
 $REDAN_BIN faq faqs create --category fuel --question-en "..." --question-sn "..." --question-nd "..." --answer-en "..." --answer-sn "..." --answer-nd "..." --json
 $REDAN_BIN faq faqs update <id> --category fuel --question-en "..." --question-sn "..." --question-nd "..." --answer-en "..." --answer-sn "..." --answer-nd "..." --json
 $REDAN_BIN faq faqs delete <id> --confirm --json
+
+$REDAN_BIN forms list --json
+$REDAN_BIN forms list --type quote --json
+$REDAN_BIN forms get bulk-fuel-quotation --json
+$REDAN_BIN forms update bulk-fuel-quotation --active false --json
+$REDAN_BIN forms update bulk-fuel-quotation --fields-json '[{"key":"company","type":"text","required":true,"skippable":false,"active":true,"labels":{"en":"Company name","sn":"Zita rekambani","nd":"Ibizo lenkampani"},"options":[]}]' --json
 ```
 
 All three locales are required for every FAQ write. Show the returned `links.admin` URL when reporting a category or FAQ so the user can open the corresponding Redan admin page. Reads and writes return normalized JSON when `--json` is supplied.
 
 Create and update only when the user explicitly requests the change. Deletes are destructive: repeat the exact record/category and require explicit confirmation before passing `--confirm`. If the API returns `429`, report its retry-after value and do not retry a write automatically.
+
+Forms are edited through forms update. The --fields-json value replaces the complete ordered field list, so retrieve the form first, preserve every existing field and all three locale labels, then apply the requested change. Supported field types are text, number, date, and select; select fields require 2–8 options with all three locale labels. The API increments the form version and stores the previous field definition automatically. Show the returned links.admin URL so the user can open the form builder at /admin/quotation-forms/<key>/edit.
