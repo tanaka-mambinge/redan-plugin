@@ -9,7 +9,7 @@
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/tanaka-mambinge/redan-plugin",
-        "path": "./",
+        "path": "./plugins/redan",
         "ref": "main"
       },
       "policy": {

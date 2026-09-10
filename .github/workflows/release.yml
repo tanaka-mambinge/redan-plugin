@@ -18,9 +18,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          go-version-file: go.mod
+          go-version-file: plugins/redan/go.mod
 
       - name: Test
+        working-directory: plugins/redan
         run: go test ./...
 
       - name: Build release assets
@@ -35,7 +36,7 @@ jobs:
           fi
 
           version="${TAG#v}"
-          manifest_version="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' .codex-plugin/plugin.json | head -n 1)"
+          manifest_version="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' plugins/redan/.codex-plugin/plugin.json | head -n 1)"
           if [[ "${manifest_version%%+*}" != "$version" ]]; then
             echo "Tag version $version does not match plugin version $manifest_version" >&2
             exit 1
@@ -43,7 +44,7 @@ jobs:
 
           mkdir -p dist
           while IFS=: read -r goos goarch asset; do
-            CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags="-s -w -X main.version=$version" -o "dist/$asset" ./cmd/redan
+            CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags="-s -w -X main.version=$version" -o "dist/$asset" ./plugins/redan/cmd/redan
           done <<'TARGETS'
           linux:amd64:redan_linux_amd64
           linux:arm64:redan_linux_arm64
