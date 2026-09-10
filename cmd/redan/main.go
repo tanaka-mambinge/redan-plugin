@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/t12e/redan-plugin/internal/auth"
 	"github.com/t12e/redan-plugin/internal/client"
@@ -37,7 +38,7 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 		return err
 	}
 	if args[0] == "auth" {
-		return authentication(args[1:], jsonOutput, out)
+		return authentication(ctx, args[1:], jsonOutput, out)
 	}
 	if len(args) < 2 {
 		return errors.New("usage: redan [--json] faq categories|faqs <command> [options]")
@@ -68,77 +69,61 @@ func faq(ctx context.Context, api *client.Client, args []string, jsonOutput bool
 	}
 }
 
-func authentication(args []string, jsonOutput bool, out io.Writer) error {
+func authentication(ctx context.Context, args []string, jsonOutput bool, out io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("auth requires configure, status, or logout")
+		return errors.New("auth requires login, status, or logout")
 	}
 	store := auth.NewStore()
 	switch args[0] {
-	case "configure":
-		f := flag.NewFlagSet("auth configure", flag.ContinueOnError)
+	case "login":
+		f := flag.NewFlagSet("auth login", flag.ContinueOnError)
 		f.SetOutput(io.Discard)
-		tokenStdin := f.Bool("token-stdin", false, "read the integration token from stdin")
-		apiURL := f.String("api-url", "", "optional Redan API URL override")
+		email := f.String("email", "", "pre-fill the email on the local login page")
+		apiURL := f.String("api-url", client.DefaultAPIBase, "Redan API URL override")
 		if err := f.Parse(args[1:]); err != nil {
 			return err
 		}
-		if !*tokenStdin {
-			return errors.New("auth configure requires --token-stdin")
-		}
-		token, err := readTokenStdin(os.Stdin)
-		if err != nil {
-			return err
-		}
-		if err := store.Save(auth.Credential{Token: token, APIURL: strings.TrimRight(strings.TrimSpace(*apiURL), "/")}); err != nil {
-			return fmt.Errorf("save Redan FAQ credential: %w", err)
-		}
-		if jsonOutput {
-			return writeJSON(out, map[string]any{"authenticated": true, "api_url": configuredAPIURL(*apiURL)})
-		}
-		_, err = fmt.Fprintln(out, "Redan FAQ credential saved in the OS keyring.")
-		return err
+		return runBrowserLogin(ctx, configuredAPIURL(*apiURL), *email, jsonOutput, out)
 	case "status":
 		credential, err := store.Load()
 		if errors.Is(err, auth.ErrNotFound) {
 			if jsonOutput {
 				return writeJSON(out, map[string]any{"authenticated": false})
 			}
-			_, printErr := fmt.Fprintln(out, "Not configured for Redan FAQ management.")
+			_, printErr := fmt.Fprintln(out, "Not logged in to Redan.")
 			return printErr
 		}
 		if err != nil {
 			return err
 		}
-		apiURL := configuredAPIURL(credential.APIURL)
-		if jsonOutput {
-			return writeJSON(out, map[string]any{"authenticated": true, "api_url": apiURL})
+		api, err := client.NewAuthenticated()
+		if err != nil {
+			return err
 		}
-		_, err = fmt.Fprintf(out, "Configured for Redan FAQ management at %s.\n", apiURL)
+		status, err := api.Status(ctx)
+		if err != nil {
+			return err
+		}
+		if jsonOutput {
+			return writeJSON(out, status)
+		}
+		_, err = fmt.Fprintf(out, "Logged in as %s (%s). Session expires %s.\n", credential.UserName, credential.UserEmail, credential.ExpiresAt.Format(time.RFC3339))
 		return err
 	case "logout":
+		if api, loadErr := client.NewAuthenticated(); loadErr == nil {
+			_ = api.Logout(ctx)
+		}
 		if err := store.Delete(); err != nil {
-			return fmt.Errorf("remove Redan FAQ credential: %w", err)
+			return fmt.Errorf("remove Redan session: %w", err)
 		}
 		if jsonOutput {
 			return writeJSON(out, map[string]any{"logged_out": true})
 		}
-		_, err := fmt.Fprintln(out, "Redan FAQ credential removed from the OS keyring.")
+		_, err := fmt.Fprintln(out, "Redan session removed from the OS keyring.")
 		return err
 	default:
 		return fmt.Errorf("unknown auth command %q", args[0])
 	}
-}
-
-func readTokenStdin(reader io.Reader) (string, error) {
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return "", fmt.Errorf("read token from stdin: %w", err)
-	}
-	token := strings.TrimSpace(strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n")[0])
-	if token == "" {
-		return "", errors.New("token-stdin did not provide a token")
-	}
-	return token, nil
 }
 
 func configuredAPIURL(value string) string {
@@ -421,6 +406,6 @@ func writeJSON(out io.Writer, value any) error {
 	return encoder.Encode(value)
 }
 func usage(out io.Writer) error {
-	_, err := fmt.Fprintln(out, "redan manages Redan FAQ categories and multilingual FAQs.\n\nCommands:\n  redan auth configure --token-stdin\n  redan auth status\n  redan auth logout\n  redan [--json] faq categories list|get|create|update|delete\n  redan [--json] faq faqs list|get|create|update|delete\n  redan version")
+	_, err := fmt.Fprintln(out, "redan manages Redan content and multilingual FAQs.\n\nCommands:\n  redan auth login [--email <address>]\n  redan auth status\n  redan auth logout\n  redan [--json] faq categories list|get|create|update|delete\n  redan [--json] faq faqs list|get|create|update|delete\n  redan version")
 	return err
 }

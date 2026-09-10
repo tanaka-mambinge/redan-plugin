@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/zalando/go-keyring"
 )
@@ -21,7 +22,7 @@ func (b *memoryBackend) Delete(_, _ string) error     { b.value = ""; return nil
 func TestStoreRoundTripsCredentialWithoutExposingPlainStorageToCallers(t *testing.T) {
 	backend := &memoryBackend{}
 	store := NewStoreWithBackend(backend)
-	credential := Credential{Token: "secret-token", APIURL: "https://redan.example"}
+	credential := Credential{Token: "secret-token", APIURL: "https://redan.example", ExpiresAt: time.Now().Add(time.Hour), UserID: 7, UserName: "Admin", UserEmail: "admin@example.test"}
 	if err := store.Save(credential); err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +30,7 @@ func TestStoreRoundTripsCredentialWithoutExposingPlainStorageToCallers(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loaded != credential {
+	if loaded.Token != credential.Token || loaded.APIURL != credential.APIURL || !loaded.ExpiresAt.Equal(credential.ExpiresAt) || loaded.UserID != credential.UserID || loaded.UserName != credential.UserName || loaded.UserEmail != credential.UserEmail {
 		t.Fatalf("loaded credential = %+v", loaded)
 	}
 	if err := store.Delete(); err != nil {
@@ -37,5 +38,19 @@ func TestStoreRoundTripsCredentialWithoutExposingPlainStorageToCallers(t *testin
 	}
 	if _, err := store.Load(); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("load after delete = %v", err)
+	}
+}
+
+func TestStoreDeletesExpiredSession(t *testing.T) {
+	backend := &memoryBackend{}
+	store := NewStoreWithBackend(backend)
+	if err := store.Save(Credential{Token: "expired", ExpiresAt: time.Now().Add(-time.Minute)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Load(); !errors.Is(err, ErrExpired) {
+		t.Fatalf("load expired session = %v", err)
+	}
+	if _, err := store.Load(); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expired session was not deleted: %v", err)
 	}
 }

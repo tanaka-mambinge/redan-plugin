@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type Links struct {
 	Admin string `json:"admin,omitempty"`
 }
@@ -54,4 +56,30 @@ type DeleteResponse struct {
 		ID      string `json:"id"`
 		Deleted bool   `json:"deleted"`
 	} `json:"data"`
+}
+
+type AuthUser struct {
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+type LoginData struct {
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+	User      AuthUser  `json:"user"`
+}
+
+type LoginResponse struct {
+	Data LoginData `json:"data"`
+}
+
+type AuthStatus struct {
+	Authenticated bool      `json:"authenticated"`
+	ExpiresAt     time.Time `json:"expires_at"`
+	User          AuthUser  `json:"user"`
+}
+
+type AuthStatusResponse struct {
+	Data AuthStatus `json:"data"`
 }

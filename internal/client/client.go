@@ -25,6 +25,7 @@ type Client struct {
 	baseURL    string
 	token      string
 	httpClient *http.Client
+	store      *auth.Store
 }
 
 type APIError struct {
@@ -36,13 +37,14 @@ type APIError struct {
 
 func (e *APIError) Error() string {
 	if e.RetryAfter != "" {
-		return fmt.Sprintf("Redan FAQ API error (%s, HTTP %d): %s; retry-after: %s", e.Code, e.StatusCode, e.Message, e.RetryAfter)
+		return fmt.Sprintf("Redan API error (%s, HTTP %d): %s; retry-after: %s", e.Code, e.StatusCode, e.Message, e.RetryAfter)
 	}
-	return fmt.Sprintf("Redan FAQ API error (%s, HTTP %d): %s", e.Code, e.StatusCode, e.Message)
+	return fmt.Sprintf("Redan API error (%s, HTTP %d): %s", e.Code, e.StatusCode, e.Message)
 }
 
 func NewAuthenticated() (*Client, error) {
-	credential, err := auth.NewStore().Load()
+	store := auth.NewStore()
+	credential, err := store.Load()
 	if err != nil {
 		return nil, err
 	}
@@ -53,13 +55,44 @@ func NewAuthenticated() (*Client, error) {
 	if err := validateBaseURL(baseURL); err != nil {
 		return nil, err
 	}
-	return &Client{baseURL: baseURL, token: credential.Token, httpClient: &http.Client{Timeout: 30 * time.Second}}, nil
+	return &Client{baseURL: baseURL, token: credential.Token, httpClient: &http.Client{Timeout: 30 * time.Second}, store: store}, nil
+}
+
+func NewUnauthenticated(baseURL string) (*Client, error) {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" {
+		baseURL = DefaultAPIBase
+	}
+	if err := validateBaseURL(baseURL); err != nil {
+		return nil, err
+	}
+	return &Client{baseURL: baseURL, httpClient: &http.Client{Timeout: 30 * time.Second}}, nil
+}
+
+func Login(ctx context.Context, baseURL, email, password string) (models.LoginResponse, error) {
+	api, err := NewUnauthenticated(baseURL)
+	if err != nil {
+		return models.LoginResponse{}, err
+	}
+	var result models.LoginResponse
+	err = api.do(ctx, http.MethodPost, "/api/redan/auth/login", nil, map[string]string{"email": email, "password": password}, &result)
+	return result, err
+}
+
+func (c *Client) Status(ctx context.Context) (models.AuthStatusResponse, error) {
+	var result models.AuthStatusResponse
+	err := c.do(ctx, http.MethodGet, "/api/redan/auth/status", nil, nil, &result)
+	return result, err
+}
+
+func (c *Client) Logout(ctx context.Context) error {
+	return c.do(ctx, http.MethodPost, "/api/redan/auth/logout", nil, nil, nil)
 }
 
 func validateBaseURL(baseURL string) error {
 	parsed, err := url.Parse(baseURL)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return errors.New("Redan FAQ API URL must be an absolute URL")
+		return errors.New("Redan API URL must be an absolute URL")
 	}
 	return nil
 }
@@ -181,12 +214,12 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	req.Header.Set("X-Request-ID", hex.EncodeToString(requestID))
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("request Redan FAQ API: %w", err)
+		return fmt.Errorf("request Redan API: %w", err)
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	if err != nil {
-		return fmt.Errorf("read Redan FAQ API response: %w", err)
+		return fmt.Errorf("read Redan API response: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		var envelope struct {
@@ -209,13 +242,16 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 		if code == "" {
 			code = fmt.Sprintf("HTTP_%d", resp.StatusCode)
 		}
+		if resp.StatusCode == http.StatusUnauthorized && c.store != nil {
+			_ = c.store.Delete()
+		}
 		return &APIError{StatusCode: resp.StatusCode, Code: code, Message: message, RetryAfter: resp.Header.Get("Retry-After")}
 	}
 	if output == nil || len(bytes.TrimSpace(data)) == 0 {
 		return nil
 	}
 	if err := json.Unmarshal(data, output); err != nil {
-		return fmt.Errorf("decode Redan FAQ API response: %w", err)
+		return fmt.Errorf("decode Redan API response: %w", err)
 	}
 	return nil
 }

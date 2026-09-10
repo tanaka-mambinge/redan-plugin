@@ -5,11 +5,13 @@ Standalone Codex plugin for managing Redan Zimbabwe content and operations. FAQ 
 ## Authentication
 
 ```bash
-printf '%s\n' '<scoped integration token>' | redan auth configure --token-stdin
+redan auth login
 redan auth status
 ```
 
-The CLI uses the built-in Redan API URL and stores the credential in the OS keyring, following the Takealot plugin pattern. The Redan Laravel application validates the corresponding server credential with `REDAN_FAQ_PLUGIN_TOKEN`. Tokens are never printed by the CLI or included in normal output.
+`redan auth login` opens a temporary loopback-only page where you enter your Redan admin email and password. The Redan API returns a short-lived session token; the CLI stores it only in the native OS keyring and never prints it. No environment variables, config files, or token arguments are required.
+
+The built-in API URL is `http://127.0.0.1:8205` for the current local Redan server. An optional `--api-url` flag is available for another deployment; it is stored with the keyring session, not in a config file.
 
 ## Install the released CLI
 

@@ -43,7 +43,7 @@ jobs:
 
           mkdir -p dist
           while IFS=: read -r goos goarch asset; do
-            CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags="-s -w -X main.version=$version" -o "dist/$asset" ./cmd/redan-faq
+            CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags="-s -w -X main.version=$version" -o "dist/$asset" ./cmd/redan
           done <<'TARGETS'
           linux:amd64:redan_linux_amd64
           linux:arm64:redan_linux_arm64

@@ -3,16 +3,20 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/zalando/go-keyring"
 )
 
 const (
-	keyringService = "redan-faq-plugin"
+	keyringService = "redan-plugin"
 	keyringAccount = "default"
 )
 
-var ErrNotFound = errors.New("Redan FAQ authentication is not configured")
+var (
+	ErrNotFound = errors.New("Redan authentication session not found")
+	ErrExpired  = errors.New("Redan authentication session expired; run redan auth login again")
+)
 
 type Backend interface {
 	Get(service, account string) (string, error)
@@ -37,8 +41,12 @@ type Store struct {
 }
 
 type Credential struct {
-	Token  string `json:"token"`
-	APIURL string `json:"api_url,omitempty"`
+	Token     string    `json:"token"`
+	APIURL    string    `json:"api_url"`
+	ExpiresAt time.Time `json:"expires_at"`
+	UserID    int64     `json:"user_id"`
+	UserName  string    `json:"user_name"`
+	UserEmail string    `json:"user_email"`
 }
 
 func NewStore() *Store { return NewStoreWithBackend(keyringBackend{}) }
@@ -51,8 +59,8 @@ func NewStoreWithBackend(backend Backend) *Store {
 }
 
 func (s *Store) Save(credential Credential) error {
-	if credential.Token == "" {
-		return errors.New("Redan FAQ API token cannot be empty")
+	if credential.Token == "" || credential.ExpiresAt.IsZero() {
+		return errors.New("Redan login response did not contain a complete temporary session")
 	}
 	encoded, err := json.Marshal(credential)
 	if err != nil {
@@ -67,14 +75,18 @@ func (s *Store) Load() (Credential, error) {
 		if errors.Is(err, keyring.ErrNotFound) {
 			return Credential{}, ErrNotFound
 		}
-		return Credential{}, errors.New("read Redan FAQ credential from OS keyring: " + err.Error())
+		return Credential{}, errors.New("read Redan session from OS keyring: " + err.Error())
 	}
 	var credential Credential
 	if err := json.Unmarshal([]byte(secret), &credential); err != nil {
-		return Credential{}, errors.New("Redan FAQ credential in OS keyring is invalid")
+		return Credential{}, errors.New("Redan session in OS keyring is invalid")
 	}
-	if credential.Token == "" {
-		return Credential{}, errors.New("Redan FAQ credential in OS keyring is incomplete; configure it again")
+	if credential.Token == "" || credential.ExpiresAt.IsZero() {
+		return Credential{}, errors.New("Redan session in OS keyring is incomplete; log in again")
+	}
+	if !time.Now().Before(credential.ExpiresAt) {
+		_ = s.Delete()
+		return Credential{}, ErrExpired
 	}
 	return credential, nil
 }

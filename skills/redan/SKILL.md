@@ -1,9 +1,9 @@
 ---
-name: redan-faq
-description: Manage Redan Zimbabwe FAQ categories and multilingual FAQ content through the Redan CLI.
+name: redan
+description: Manage Redan Zimbabwe content and multilingual FAQ content through the Redan CLI.
 ---
 
-# Redan FAQ Manager
+# Redan Management
 
 Use the downloaded `redan` CLI as the only interface for Redan management. Never call the Redan API directly, use browser automation, or expose the API token.
 
@@ -19,12 +19,12 @@ On Windows:
 $REDAN_BIN = & powershell -NoProfile -ExecutionPolicy Bypass -File <plugin-root>\scripts\download_cli.ps1
 ```
 
-The launcher downloads the matching GitHub Release binary from `tanaka-mambinge/redan-plugin`, verifies `checksums.txt`, and caches it under `~/.redan/bin`. For local development, use `scripts/build_cli.sh` instead. The CLI uses the built-in local Redan API URL and stores the integration credential in the OS keyring, matching the Takealot plugin pattern. Configure it once with `$REDAN_BIN auth configure --token-stdin`; do not put credentials in command arguments, chat, or environment variables.
+The launcher downloads the matching GitHub Release binary from `tanaka-mambinge/redan-plugin`, verifies `checksums.txt`, and caches it under `~/.redan/bin`. For local development, use `scripts/build_cli.sh` instead. The CLI uses the built-in local Redan API URL (`http://127.0.0.1:8205`) and stores the temporary authenticated session in the OS keyring, matching the Takealot plugin pattern. Run `$REDAN_BIN auth login` to open the temporary local credential page. Do not put credentials in command arguments, chat, environment variables, or config files.
 
 ## Commands
 
 ```bash
-$REDAN_BIN auth configure --token-stdin
+$REDAN_BIN auth login
 $REDAN_BIN auth status --json
 $REDAN_BIN auth logout
 
