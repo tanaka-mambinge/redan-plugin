@@ -1,0 +1,24 @@
+{
+  "name": "redan-plugin",
+  "version": "0.1.0",
+  "description": "Manage Redan Zimbabwe content and operations through the Redan CLI.",
+  "author": {
+    "name": "t12e"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Redan Management",
+    "shortDescription": "Manage Redan content and operations",
+    "longDescription": "Manage Redan Zimbabwe content and operations through an authenticated Redan CLI, starting with multilingual FAQ categories and FAQ records.",
+    "developerName": "t12e",
+    "category": "Business",
+    "capabilities": ["Search", "Content management", "Multilingual"],
+    "composerIcon": "./assets/redan-logo.png",
+    "logo": "./assets/redan-logo.png",
+    "defaultPrompt": [
+      "List Redan FAQ categories.",
+      "Find the Redan FAQ about fuel cards.",
+      "Update this Redan FAQ in all three languages."
+    ]
+  }
+}
